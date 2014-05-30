@@ -1,59 +1,80 @@
 angular.module('ngCacheBuster', [])
-  .config(function($httpProvider) {
-    return $httpProvider.interceptors.push('httpRequestInterceptorCacheBuster');
-  })
-    .provider('httpRequestInterceptorCacheBuster', function() {
-	
-	this.matchlist = [/.*partials.*/, /.*views.*/ ];
-	this.logRequests = false;
-	
-	//Default to whitelist (i.e. block all except matches)
-	this.black=false; 
-	
-	//Select blacklist or whitelist, default to whitelist
-	this.setMatchlist = function(list,black) {
-	    this.black = typeof black != 'undefined' ? black : false
-	    this.matchlist = list;
-	};
-	
+    .config(function ($httpProvider) {
+        "use strict";
+        return $httpProvider.interceptors.push('httpRequestInterceptorCacheBuster');
+    }).provider('httpRequestInterceptorCacheBuster', function () {
+        "use strict";
 
-	this.setLogRequests = function(logRequests) {
-	    this.logRequests = logRequests;
-	};
-	
-	this.$get = function($q, $log) {
-	    var matchlist = this.matchlist;
-	    var logRequests = this.logRequests;
-	    var black = this.black;
-	    $log.log("Blacklist? ",black);
-	    return {
-		'request': function(config) {
-		    //Blacklist by default, match with whitelist
-		    var busted= !black; 
-		    
-		    for(var i=0; i< matchlist.length; i++){
-			if(config.url.match(matchlist[i])) {
-			    busted=black; break;
-			}
-		    }
-		    
-		    //Bust if the URL was on blacklist or not on whitelist
-		    if (busted) {
-			var d = new Date();
-			//Some url's allready have '?' attached
-			config.url+=config.url.indexOf('?') === -1 ? '?' : '&'
-			config.url += 'cacheBuster=' + d.getTime();
-		    }
-		    
-		    if (logRequests) {
-			var log='request.url =' + config.url
-			busted ? $log.warn(log) : $log.info(log)
-		    }
+        this.matchlist = [/.*partials.*/, /.*views.*/ ];
+        this.logRequests = false;
 
-		    return config || $q.when(config);
-		}
-	    }
-	};
+        //Default to whitelist (i.e. block all except matches)
+        this.black = false;
+
+        //Select blacklist or whitelist, default to whitelist
+        this.setMatchlist = function (list, black) {
+            this.black = (typeof black != 'undefined') ? black : false;
+            this.matchlist = list;
+        };
+
+        this.paramname = "cacheBuster";
+        this.paramvalue = null;
+
+        this.setLogRequests = function (logRequests) {
+            this.logRequests = logRequests;
+        };
+
+        this.setParamName = function (newName) {
+            this.paramname = newName;
+        };
+
+        this.setParamValue = function (newValue) {
+            this.paramvalue = newValue;
+        };
+
+        this.$get = function ($q, $log) {
+            var matchlist = this.matchlist,
+                logRequests = this.logRequests,
+                black = this.black,
+                paramname = this.paramname,
+                paramvalue = this.paramvalue;
+
+            $log.log("Blacklist? ", black);
+            return {
+                'request': function (config) {
+                    //Blacklist by default, match with whitelist
+                    var busted = !black,
+                        i = 0,
+                        d,
+                        log = "",
+                        logger;
+
+                    for (i; i < matchlist.length; i = i + 1) {
+                        if (config.url.match(matchlist[i])) {
+                            busted = black;
+                            break;
+                        }
+                    }
+
+                    //Bust if the URL was on blacklist or not on whitelist
+                    if (busted) {
+                        d = new Date();
+                        paramvalue = paramvalue || d.getTime();
+                        //Some urls already have '?' attached
+                        config.url += config.url.indexOf('?') === -1 ? '?' : '&'
+                        config.url += paramname + '=' + paramvalue;
+                    }
+
+                    if (logRequests) {
+                        log = 'request.url =' + config.url;
+                        logger = busted ? $log.warn : $log.info;
+                        logger(log);
+                    }
+
+                    return config || $q.when(config);
+                }
+            };
+        };
     });
 
 
