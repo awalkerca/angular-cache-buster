@@ -39,7 +39,10 @@ angular.module('ngCacheBuster', [])
                 paramname = this.paramname,
                 paramvalue = this.paramvalue;
 
-            $log.log("Blacklist? ", black);
+            if (logRequests) {
+                $log.log("Blacklist? ", black);
+            }
+
             return {
                 'request': function (config) {
                     //Blacklist by default, match with whitelist
